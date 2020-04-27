@@ -1,0 +1,324 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FUn with Fabric.Js</title>
+    <style>
+        	#drawing-mode {
+			  margin-bottom: 10px;
+			  vertical-align: top;
+			}
+			#drawing-mode-options {
+			  display: inline-block;
+			  vertical-align: top;
+			  margin-bottom: 10px;
+			  margin-top: 10px;
+			  background: #f5f2f0;
+			  padding: 10px; 
+			}
+			.info {
+			  display: inline-block;
+			  width: 25px;
+			  background: #ffc;
+			}
+			#bd-wrapper {
+			  min-width: 1500px;
+			}
+            a {
+                text-decoration: none; 
+                color: inherit; 
+            }
+    </style>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.5.0/jquery.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/fabric.js/3.6.3/fabric.min.js"></script> 
+</head>
+<body>
+    <div id="bd-wrapper"> 
+        <canvas style="margin-left: 2px; border: 2px solid tomato; " height="600" width="650" id="c"></canvas>  
+        <li style="list-style-type: none; margin-top:10px;">
+            <button id="rectangle" class="btn btn-info">Rectangle</button> 
+            <br>
+            <button id="select" class="btn btn-info">Turn On Selection Mode</button>
+            <button id="delete" class="btn btn-info">Delete Object</button>
+            <button onclick="undo()">Undo</button>
+            <button onclick="redo()">Redo</button>
+            <br>
+            <button id="clear-canvas" class="btn btn-info">Clear All</button> 
+            <button id="saveCanvas" class="btn btn-info">Save</button>
+            <input type="file" id="load" name="avatar" accept="image/png">
+        
+        </li>
+    </div>
+ 
+
+    <script>
+        $(document).ready(function() {
+            var canvas = new fabric.Canvas('c');
+            canvas.isDrawingMode = false;
+            canvas.selection = false;
+
+            var clearEl = document.getElementById('clear-canvas');
+            clearEl.onclick = function() {
+                canvas.clear() 
+                updateModifications(true);
+                canvas.counter++; 
+            };
+
+            var cSelection = document.getElementById('select');
+
+            cSelection.onclick = function() {
+                var val = canvas.selection,
+                    val2 = canvas.isDrawingMode;
+                val = !val;
+                changeCanvasProperty(val, false);
+                removeCanvasEvents();
+                if (canvas.selection) {
+                    changeSelectableStatus(true);
+                    cSelection.innerHTML = 'Turn Off Selection Mode';
+                    if (val2) {
+                        canvas.isDrawingMode = false;
+                    }
+                } else {
+                    changeSelectableStatus(false);
+                    cSelection.innerHTML = 'Turn On Selection Mode';
+                }
+            };
+
+            canvas.counter = 0;
+            var state = [];
+            var mods = 0;
+            canvas.on(
+                'object:modified', function () {
+                updateModifications(true);
+            },
+                'object:added', function () {
+                updateModifications(true);
+            });
+
+            function updateModifications(savehistory) {
+                if (savehistory === true) {
+                    myjson = JSON.stringify(canvas);
+                    state.push(myjson);
+                }
+            }
+
+            undo = function undo() {
+                if (mods < state.length) {
+                    canvas.clear().renderAll();
+                    canvas.loadFromJSON(state[state.length - 1 - mods - 1]);
+                    canvas.renderAll();
+                    mods += 1;
+                }
+            }
+
+            redo = function redo() {
+                if (mods > 0) {
+                    canvas.clear().renderAll();
+                    canvas.loadFromJSON(state[state.length - 1 - mods + 1]);
+                    canvas.renderAll();
+                    mods -= 1;
+                }
+            }
+
+            $("#select").click(function() {
+                this.isDrawing = false;
+                updateModifications(true);
+                canvas.counter++;
+            });
+            $("#delete").click(function() {
+                canvas.isDrawingMode = false;
+                deleteObjects();
+                updateModifications(true);
+                canvas.counter++;
+            });
+            $("#rectangle").click(function() {
+                removeCanvasEvents();
+                changeSelectableStatus(false);
+                changeCanvasProperty(false, false);
+                var rectangle = new Rectangle(canvas);
+                changeSelectableStatus(false);
+                cSelection.innerHTML = 'Turn On Selection Mode';
+                updateModifications(true);
+                canvas.counter++;
+            });
+
+            function changeCanvasProperty(selValue, drawingVal) {
+                canvas.selection = selValue;
+                canvas.isDrawingMode = drawingVal;
+            }
+
+            function changeSelectableStatus(val) {
+                canvas.forEachObject(function(obj) {
+                    obj.selectable = val;
+                })
+                canvas.renderAll();
+            }
+
+            function removeCanvasEvents() {
+                canvas.off('mouse:down');
+                canvas.off('mouse:move');
+                canvas.off('mouse:up');
+                canvas.off('object:moving');
+            }
+
+           
+            var saveCanvas = document.getElementById('saveCanvas');
+            saveCanvas.onclick = function() {
+                const data = canvas.toDataURL('image/png');
+                const anchor = document.createElement('a');
+                anchor.href = data;
+                anchor.download = 'image.png';
+                anchor.click();
+            };
+            
+            const loadInput = document.getElementById('load');
+            loadInput.addEventListener('change', (event) => load(event, canvas));
+            
+            function load(event, canvas) {
+                const file = getFile(event);
+                readTheFile(file, canvas)
+                    .then((image) => loadTheImage(image, canvas))
+            }
+
+            function getFile(event) {
+                return [...event.target.files].pop();
+            }
+            function readTheFile(file) {
+                const reader = new FileReader();
+                return new Promise((resolve) => {
+                    reader.onload = (event) => {
+                    resolve(event.target.result);
+                    };
+                    reader.readAsDataURL(file);
+                })
+            }
+            function loadTheImage(image, canvas) {
+                const img = new Image();
+                img.onload = function () {
+                    const newImage = new fabric.Image(img);
+                    canvas.add(newImage);
+                };
+                img.src = image;
+            }
+
+        
+            function deleteObjects() {
+                var activeObject = canvas.getActiveObject();
+                if (activeObject) {
+                    canvas.discardActiveObject();
+                    canvas.remove(activeObject);
+                    canvas.remove(Rectangle);                               
+                }
+            }
+
+            var Rectangle = (function() {
+                function Rectangle(canvas) {
+                    var inst = this;
+                    this.canvas = canvas;
+                    this.className = 'Rectangle';
+                    this.isDrawing = false;
+                    this.bindEvents();
+                }
+
+                Rectangle.prototype.bindEvents = function() {
+                    var inst = this;
+                    inst.canvas.on('mouse:down', function(o) {
+                        inst.onMouseDown(o);
+                    });
+                    inst.canvas.on('mouse:move', function(o) {
+                        inst.onMouseMove(o);
+                    });
+                    inst.canvas.on('mouse:up', function(o) {
+                        inst.onMouseUp(o);
+                    });
+                    inst.canvas.on('object:moving', function(o) {
+                        inst.disable();
+                    })
+                }
+                Rectangle.prototype.onMouseUp = function(o) {
+                    var inst = this;
+                    inst.disable();
+                };
+
+                Rectangle.prototype.onMouseMove = function(o) {
+                    var inst = this;
+
+
+                    if (!inst.isEnable()) {
+                        return;
+                    }
+                    console.log("mouse move rectange");
+                    var pointer = inst.canvas.getPointer(o.e);
+                    var activeObj = inst.canvas.getActiveObject();
+
+                    activeObj.stroke = 'red',
+                    activeObj.strokeWidth = 5;
+                    activeObj.fill = 'transparent';
+
+                    if (origX > pointer.x) {
+                        activeObj.set({
+                            left: Math.abs(pointer.x)
+                        });
+                    }
+                    if (origY > pointer.y) {
+                        activeObj.set({
+                            top: Math.abs(pointer.y)
+                        });
+                    }
+
+                    activeObj.set({
+                        width: Math.abs(origX - pointer.x)
+                    });
+                    activeObj.set({
+                        height: Math.abs(origY - pointer.y)
+                    });
+
+                    activeObj.setCoords();
+                    inst.canvas.renderAll();
+
+                };
+                
+                Rectangle.prototype.onMouseDown = function(o) {
+                    var inst = this;
+                    inst.enable();
+
+                    var pointer = inst.canvas.getPointer(o.e);
+                    origX = pointer.x;
+                    origY = pointer.y;
+
+                    var rect = new fabric.Rect({
+                        left: origX,
+                        top: origY,
+                        originX: 'left',
+                        originY: 'top',
+                        width: pointer.x - origX,
+                        height: pointer.y - origY,
+                        selectable: false,
+                        hasBorders: false,
+                        hasControls: false
+                    });
+
+                    inst.canvas.add(rect).setActiveObject(rect);
+                };
+
+                Rectangle.prototype.isEnable = function() {
+                    return this.isDrawing;
+                }
+
+                Rectangle.prototype.enable = function() {
+                    this.isDrawing = true;
+                }
+
+                Rectangle.prototype.disable = function() {
+                    this.isDrawing = false;
+                }
+
+                return Rectangle;
+            }());
+            
+        });
+        
+    </script>
+</body>
+</html>
