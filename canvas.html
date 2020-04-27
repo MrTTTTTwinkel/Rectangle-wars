@@ -22,9 +22,6 @@
 			  width: 25px;
 			  background: #ffc;
 			}
-			#bd-wrapper {
-			  min-width: 1500px;
-			}
             a {
                 text-decoration: none; 
                 color: inherit; 
@@ -34,18 +31,18 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/fabric.js/3.6.3/fabric.min.js"></script> 
 </head>
 <body>
-    <div id="bd-wrapper"> 
-        <canvas style="margin-left: 2px; border: 2px solid tomato; " height="600" width="650" id="c"></canvas>  
-        <li style="list-style-type: none; margin-top:10px;">
-            <button id="rectangle" class="btn btn-info">Rectangle</button> 
+    <div> 
+        <canvas style="margin-left: 10px; border: 2px solid tomato; " height="600" width="1400" id="c"></canvas>   
+        <li style="list-style-type: none; margin-top:10px; margin-left:10px">
+            <button id="rectangle">Draw Rectangle</button> 
             <br>
-            <button id="select" class="btn btn-info">Turn On Selection Mode</button>
-            <button id="delete" class="btn btn-info">Delete Object</button>
+            <button id="select">Turn On Selection Mode</button>
+            <button id="delete">Delete Object</button>
             <button onclick="undo()">Undo</button>
             <button onclick="redo()">Redo</button>
             <br>
-            <button id="clear-canvas" class="btn btn-info">Clear All</button> 
-            <button id="saveCanvas" class="btn btn-info">Save</button>
+            <button id="clear-canvas">Clear All</button> 
+            <button id="saveCanvas">Save</button>
             <input type="file" id="load" name="avatar" accept="image/png">
         
         </li>
